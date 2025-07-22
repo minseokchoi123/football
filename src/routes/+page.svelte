@@ -3,17 +3,18 @@
 	import { supabase } from '$lib/supabase.js';
 	import { onMount } from 'svelte';
 
-	function getLolTier(skill) {
-		if (skill <= 9) return { name: '아이언', icon: 'mdi:medal', color: 'text-gray-500' };
-		if (skill <= 19) return { name: '브론즈', icon: 'mdi:medal', color: 'text-yellow-700' };
-		if (skill <= 29) return { name: '실버', icon: 'mdi:medal', color: 'text-gray-400' };
-		if (skill <= 39) return { name: '골드', icon: 'mdi:medal', color: 'text-yellow-400' };
-		if (skill <= 49) return { name: '플래티넘', icon: 'mdi:medal', color: 'text-cyan-400' };
-		if (skill <= 69) return { name: '다이아', icon: 'mdi:medal', color: 'text-blue-400' };
-		if (skill <= 79) return { name: '마스터', icon: 'mdi:crown-outline', color: 'text-purple-500' };
-		if (skill <= 89) return { name: '마스터', icon: 'mdi:crown', color: 'text-red-500' };
-		return { name: '챌린저', icon: 'mdi:star-check-outline', color: 'text-yellow-500' };
-	}
+	  function getLolTier(skill) {
+	    if (skill <= 9) return { name: "아이언", icon: "mdi:medal", color: "text-gray-500" };
+	    if (skill <= 19) return { name: "브론즈", icon: "mdi:medal", color: "text-yellow-700" };
+	    if (skill <= 29) return { name: "실버", icon: "mdi:medal", color: "text-gray-400" };
+	    if (skill <= 39) return { name: "골드", icon: "mdi:medal", color: "text-yellow-400" };
+	    if (skill <= 49) return { name: "플래티넘", icon: "mdi:medal", color: "text-cyan-400" };
+	    if (skill <= 59) return { name: "에메랄드", icon: "mdi:medal", color: "text-emerald-400" };
+	    if (skill <= 69) return { name: "다이아", icon: "mdi:medal", color: "text-blue-400" };
+	    if (skill <= 79) return { name: "마스터", icon: "mdi:crown-outline", color: "text-purple-500" };
+	    if (skill <= 89) return { name: "그랜드마스터", icon: "mdi:crown", color: "text-red-500" };
+	    return { name: "챌린저", icon: "mdi:star-check-outline", color: "text-yellow-500" };
+	  }
 	let people = $state([]);
 	let loading = $state(true);
 	let newPerson = $state('');
@@ -40,9 +41,35 @@
 		newPerson.trim() && !people.some((p) => p.name === newPerson.trim()) && people.length < 20
 	);
 
-	// 팀별 점수 총합
-	const teamASum = $derived(teamAssignments.A.reduce((sum, p) => sum + (p?.skill ?? 0), 0));
-	const teamBSum = $derived(teamAssignments.B.reduce((sum, p) => sum + (p?.skill ?? 0), 0));
+	  // 팀별 점수 총합
+	  const teamASum = $derived(teamAssignments.A.reduce((sum, p) => sum + (p?.skill ?? 0), 0));
+	  const teamBSum = $derived(teamAssignments.B.reduce((sum, p) => sum + (p?.skill ?? 0), 0));
+
+	  // 티어 분포 계산
+	  const tierDistribution = $derived.by(() => {
+	    const distribution = {
+	      아이언: { count: 0, range: "0-9", color: "text-gray-500" },
+	      브론즈: { count: 0, range: "10-19", color: "text-yellow-700" },
+	      실버: { count: 0, range: "20-29", color: "text-gray-400" },
+	      골드: { count: 0, range: "30-39", color: "text-yellow-400" },
+	      플래티넘: { count: 0, range: "40-49", color: "text-cyan-400" },
+	      에메랄드: { count: 0, range: "50-59", color: "text-emerald-400" },
+	      다이아: { count: 0, range: "60-69", color: "text-blue-400" },
+	      마스터: { count: 0, range: "70-79", color: "text-purple-500" },
+	      그랜드마스터: { count: 0, range: "80-89", color: "text-red-500" },
+	      챌린저: { count: 0, range: "90-100", color: "text-yellow-500" }
+	    };
+
+	    // 실제 분포 계산
+	    people.forEach(person => {
+	      const tier = getLolTier(person.skill);
+	      if (distribution[tier.name]) {
+	        distribution[tier.name].count++;
+	      }
+	    });
+
+	    return distribution;
+	  });
 
 	async function loadPeople() {
 		const { data, error } = await supabase
@@ -171,6 +198,25 @@
 				<div class="stat place-items-center">
 					<div class="stat-title">미배정</div>
 					<div class="stat-value text-lg text-warning">{unassignedCount}</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 티어 분포 카드 -->
+		<div class="card bg-base-100 shadow mb-6 w-full">
+			<div class="card-body p-4">
+				<h2 class="card-title text-lg mb-4">🏆 티어 분포</h2>
+				<div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+					{#each Object.entries(tierDistribution) as [tierName, tierInfo]}
+						{@const tier = getLolTier(tierName === '아이언' ? 5 : tierName === '브론즈' ? 15 : tierName === '실버' ? 25 : tierName === '골드' ? 35 : tierName === '플래티넘' ? 45 : tierName === '에메랄드' ? 55 : tierName === '다이아' ? 65 : tierName === '마스터' ? 75 : tierName === '그랜드마스터' ? 85 : 95)}
+						<div class="tooltip" data-tip="{tierName}: {tierInfo.range}점">
+							<div class="text-center p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors">
+								<Icon icon={tier.icon} class={`text-2xl ${tier.color} mx-auto mb-1`} />
+								<div class="text-xs font-semibold">{tierName}</div>
+								<div class="text-lg font-bold text-primary">{tierInfo.count}명</div>
+							</div>
+						</div>
+					{/each}
 				</div>
 			</div>
 		</div>
