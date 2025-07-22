@@ -24,9 +24,10 @@
 		A: [null, null, null, null],
 		B: [null, null, null, null]
 	});
-	// 커스텀 드롭다운 열림 상태
-	let openA = $state([false, false, false, false]);
-	let openB = $state([false, false, false, false]);
+	// 모달 상태
+	let modalOpen = $state(false);
+	let selectedTeam = $state('');
+	let selectedPosition = $state(0);
 
 	// Derived values
 	const teamACount = $derived(teamAssignments.A.filter((p) => p !== null).length);
@@ -140,13 +141,15 @@
 		);
 	}
 
-	function selectA(idx, person) {
-		teamAssignments.A[idx] = person;
-		openA[idx] = false;
+	function openModal(team, position) {
+		selectedTeam = team;
+		selectedPosition = position;
+		modalOpen = true;
 	}
-	function selectB(idx, person) {
-		teamAssignments.B[idx] = person;
-		openB[idx] = false;
+
+	function selectPerson(person) {
+		teamAssignments[selectedTeam][selectedPosition] = person;
+		modalOpen = false;
 	}
 
 	function clearAll() {
@@ -314,6 +317,43 @@
 				</div>
 			</div>
 
+			<!-- 팀원 선택 모달 -->
+			{#if modalOpen}
+				<div class="modal modal-open">
+					<div class="modal-box max-w-md">
+						<h3 class="font-bold text-lg mb-4">
+							{selectedTeam}팀 {selectedPosition + 1}번 선택
+						</h3>
+
+						<div class="space-y-2 max-h-80 overflow-y-auto">
+							{#each availableOptions(selectedTeam, selectedPosition) as option}
+								{@const tier = getLolTier(option.skill)}
+								<button
+									class="btn btn-outline w-full justify-start"
+									onclick={() => selectPerson(option)}
+								>
+									<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
+									<span>{option.name}</span>
+									<span class="text-xs font-bold">{option.skill}</span>
+								</button>
+							{/each}
+
+							<!-- 빈 슬롯 옵션 -->
+							<button
+								class="btn btn-outline w-full justify-start"
+								onclick={() => selectPerson(null)}
+							>
+								<span class="text-base-content/60">빈 슬롯</span>
+							</button>
+						</div>
+
+						<div class="modal-action">
+							<button class="btn" onclick={() => modalOpen = false}>취소</button>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<!-- A팀 -->
 			<div
 				class="card flex flex-1 flex-col border-l-4 border-primary bg-base-100 shadow"
@@ -327,15 +367,11 @@
 
 					<div class="flex-1 space-y-3">
 						{#each Array(4) as _, idx}
-							<div class="relative">
+							<div>
 								<label class="text-xs text-base-content/70">{idx + 1}번</label>
 								<button
-									class="select-bordered select flex w-full items-center gap-2 select-sm {teamAssignments
-										.A[idx]
-										? 'select-primary'
-										: ''}"
-									type="button"
-									onclick={() => (openA[idx] = !openA[idx])}
+									class="btn btn-outline w-full justify-start {teamAssignments.A[idx] ? 'btn-primary' : ''}"
+									onclick={() => openModal('A', idx)}
 								>
 									{#if teamAssignments.A[idx]}
 										{@const tier = getLolTier(teamAssignments.A[idx].skill)}
@@ -348,21 +384,6 @@
 										<span class="text-base-content/60">선택하세요</span>
 									{/if}
 								</button>
-								{#if openA[idx]}
-									<div class="absolute z-10 mt-1 w-full rounded border bg-base-100 shadow">
-										{#each availableOptions('A', idx) as option}
-											{@const tier = getLolTier(option.skill)}
-											<div
-												class="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-base-200"
-												onclick={() => selectA(idx, option)}
-											>
-												<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
-												<span>{option.name}</span>
-												<span class="text-xs font-bold text-primary">{option.skill}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
 							</div>
 						{/each}
 					</div>
@@ -382,15 +403,11 @@
 
 					<div class="flex-1 space-y-3">
 						{#each Array(4) as _, idx}
-							<div class="relative">
+							<div>
 								<label class="text-xs text-base-content/70">{idx + 1}번</label>
 								<button
-									class="select-bordered select flex w-full items-center gap-2 select-sm {teamAssignments
-										.B[idx]
-										? 'select-secondary'
-										: ''}"
-									type="button"
-									onclick={() => (openB[idx] = !openB[idx])}
+									class="btn btn-outline w-full justify-start {teamAssignments.B[idx] ? 'btn-secondary' : ''}"
+									onclick={() => openModal('B', idx)}
 								>
 									{#if teamAssignments.B[idx]}
 										{@const tier = getLolTier(teamAssignments.B[idx].skill)}
@@ -403,21 +420,6 @@
 										<span class="text-base-content/60">선택하세요</span>
 									{/if}
 								</button>
-								{#if openB[idx]}
-									<div class="absolute z-10 mt-1 w-full rounded border bg-base-100 shadow">
-										{#each availableOptions('B', idx) as option}
-											{@const tier = getLolTier(option.skill)}
-											<div
-												class="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-base-200"
-												onclick={() => selectB(idx, option)}
-											>
-												<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
-												<span>{option.name}</span>
-												<span class="text-xs font-bold text-secondary">{option.skill}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
 							</div>
 						{/each}
 					</div>
