@@ -20,6 +20,7 @@
 	let newPerson = $state('');
 	let editingSkillIdx = $state(null);
 	let tempSkill = $state(50);
+	let waitingList = $state([]);
 	let teamAssignments = $state({
 		A: [null, null, null, null],
 		B: [null, null, null, null]
@@ -157,6 +158,37 @@
 		teamAssignments.B = [null, null, null, null];
 	}
 
+	function addToWaitingList(person) {
+		if (!waitingList.some(p => p.id === person.id)) {
+			waitingList = [...waitingList, person];
+		}
+	}
+
+	function removeFromWaitingList(person) {
+		waitingList = waitingList.filter(p => p.id !== person.id);
+	}
+
+	function shuffleWaitingList() {
+		if (waitingList.length === 0) return;
+
+		// 팀 초기화
+		teamAssignments.A = [null, null, null, null];
+		teamAssignments.B = [null, null, null, null];
+
+		// 대기 리스트 셔플
+		const shuffled = [...waitingList].sort(() => Math.random() - 0.5);
+
+		// 최대 8명까지 배정
+		const toAssign = shuffled.slice(0, 8);
+
+		// A팀과 B팀에 번갈아 배정
+		toAssign.forEach((person, index) => {
+			const team = index % 2 === 0 ? 'A' : 'B';
+			const position = Math.floor(index / 2);
+			teamAssignments[team][position] = person;
+		});
+	}
+
 	function handleKeydown(event) {
 		if (event.key === 'Enter') {
 			addPerson();
@@ -224,7 +256,7 @@
 			</div>
 		</div>
 
-		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-6 lg:grid-cols-3">
+		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-6 lg:grid-cols-4">
 			<!-- 인원 관리 -->
 			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow" id="main-card">
 				<div class="card-body flex h-full flex-col p-4">
@@ -291,12 +323,21 @@
 												</button>
 											{/if}
 										</div>
-										<button
-											class="btn btn-outline btn-xs btn-error"
-											onclick={() => removePerson(person)}
-										>
-											✕
-										</button>
+										<div class="flex gap-1">
+											<button
+												class="btn btn-outline btn-xs btn-warning"
+												onclick={() => addToWaitingList(person)}
+												disabled={waitingList.some(p => p.id === person.id)}
+											>
+												추가
+											</button>
+											<button
+												class="btn btn-outline btn-xs btn-error"
+												onclick={() => removePerson(person)}
+											>
+												✕
+											</button>
+										</div>
 									</div>
 								{/each}
 							</div>
@@ -312,6 +353,50 @@
 							disabled={!(teamACount === 4 && teamBCount === 4)}
 						>
 							팀원섞기
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 대기 리스트 -->
+			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow border-l-4 border-warning">
+				<div class="card-body flex h-full flex-col p-4">
+					<h2 class="card-title text-lg text-warning">⏳ 대기 리스트 ({waitingList.length}명)</h2>
+
+					<!-- 대기 인원 목록 -->
+					<div class="mb-4 max-h-40 flex-1 overflow-y-auto">
+						{#if waitingList.length === 0}
+							<p class="py-4 text-center text-base-content/60">대기 인원이 없습니다</p>
+						{:else}
+							<div class="space-y-1">
+								{#each waitingList as person}
+									{@const tier = getLolTier(person.skill)}
+									<div class="flex items-center justify-between gap-2 rounded bg-base-200 p-2">
+										<div class="flex items-center gap-2">
+											<Icon icon={tier.icon} class={`text-xl ${tier.color}`} />
+											<span class="text-sm">{person.name}</span>
+											<span class="text-xs font-bold text-warning">{person.skill}</span>
+										</div>
+										<button
+											class="btn btn-outline btn-xs btn-error"
+											onclick={() => removeFromWaitingList(person)}
+										>
+											✕
+										</button>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+
+					<!-- 셔플 버튼 -->
+					<div class="mt-auto">
+						<button
+							class="btn btn-warning w-full"
+							onclick={shuffleWaitingList}
+							disabled={waitingList.length === 0}
+						>
+							🎲 랜덤 팀 배정
 						</button>
 					</div>
 				</div>
