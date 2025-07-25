@@ -212,13 +212,40 @@
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-base-200">
-	<div class="mx-auto flex w-full max-w-7xl flex-col items-center justify-center">
- <div class="grid grid-cols-7">
-   <div class="col-span-2">
+<div class="min-h-screen bg-base-200">
+	<!-- Header -->
+	<div class="">
+		<div class="mx-auto max-w-7xl px-4 py-6">
+			<h1 class="text-4xl font-bold text-center text-base-content mb-6">⚽ 풋살 팀 매칭</h1>
+			<!-- 통계 정보 -->
+			<div class="stats flex stats-horizontal justify-center bg-base-200 shadow-lg">
+				<div class="stat place-items-center">
+					<div class="stat-title">총 인원</div>
+					<div class="stat-value text-lg">{people.length}</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">A팀</div>
+					<div class="stat-value text-lg text-primary">{teamACount}/4</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">B팀</div>
+					<div class="stat-value text-lg text-secondary">{teamBCount}/4</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">미배정</div>
+					<div class="stat-value text-lg text-warning">{unassignedCount}</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Main Content -->
+	<div class="mx-auto max-w-7xl px-6 py-8">
+		<div class="grid grid-cols-7 gap-8">
+   			<div class="col-span-2">
   			<!-- 인원 관리 -->
-			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow" id="main-card">
-				<div class="card-body flex h-full flex-col p-4">
+			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow-xl" id="main-card">
+				<div class="card-body flex h-full flex-col p-6">
 					<h2 class="card-title text-lg">👥 인원 관리</h2>
 
 					<!-- 추가 -->
@@ -236,7 +263,7 @@
 					</div>
 
 					<!-- 목록 -->
-					<div class="mb-2 max-h-40 flex-1 overflow-y-auto">
+					<div class="mb-2 max-h-96 flex-1 overflow-y-auto">
 						{#if loading}
 							<p class="py-4 text-center text-base-content/60">로딩 중...</p>
 						{:else if people.length === 0}
@@ -317,33 +344,11 @@
 				</div>
 			</div>
    </div>
-   <div class="col-span-5">
-   		<!-- Header -->
-		<div class="mb-6 w-full text-center">
-			<h1 class="mb-2 text-4xl font-bold text-base-content">⚽ 족구 팀 배정</h1>
-			<div class="stats flex stats-horizontal justify-center bg-base-100 shadow">
-				<div class="stat place-items-center">
-					<div class="stat-title">총 인원</div>
-					<div class="stat-value text-lg">{people.length}</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">A팀</div>
-					<div class="stat-value text-lg text-primary">{teamACount}/4</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">B팀</div>
-					<div class="stat-value text-lg text-secondary">{teamBCount}/4</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">미배정</div>
-					<div class="stat-value text-lg text-warning">{unassignedCount}</div>
-				</div>
-			</div>
-		</div>
+   			<div class="col-span-5">
 
 		<!-- 티어 분포 카드 -->
-		<div class="card bg-base-100 shadow mb-6 w-full">
-			<div class="card-body p-4">
+		<div class="card bg-base-100 shadow-xl mb-8 w-full">
+			<div class="card-body p-6">
 				<h2 class="card-title text-lg mb-4">🏆 티어 분포</h2>
 				<div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
 					{#each Object.entries(tierDistribution) as [tierName, tierInfo]}
@@ -360,12 +365,12 @@
 			</div>
 		</div>
 
-		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-6 lg:grid-cols-3">
+		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-8 lg:grid-cols-3">
 
 
 			<!-- 대기 리스트 -->
-			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow border-l-4 border-warning">
-				<div class="card-body flex h-full flex-col p-4">
+			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow-xl border-l-4 border-warning">
+				<div class="card-body flex h-full flex-col p-6">
 					<h2 class="card-title text-lg text-warning">⏳ 대기 리스트 ({waitingList.length}명)</h2>
 
 					<!-- 대기 인원 목록 -->
@@ -516,7 +521,7 @@
 				</div>
 			</div>
 		</div>
-   </div>
+	</div>
 
  </div>
 	</div>
