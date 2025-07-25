@@ -257,7 +257,7 @@
 	<!-- Header -->
 	<div class="">
 		<div class="mx-auto max-w-7xl px-4 py-6">
-			<h1 class="mb-6 text-center text-4xl font-bold text-base-content">⚽ 풋살 팀 매칭</h1>
+			<h1 class="mb-6 text-center text-4xl font-bold text-base-content">🏐타족단 팀 매칭</h1>
 			<!-- 통계 정보 -->
 			<div class="stats flex stats-horizontal justify-center bg-base-200 shadow-lg">
 				<div class="stat place-items-center">
