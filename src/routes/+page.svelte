@@ -18,7 +18,7 @@
 	let people = $state([]);
 	let loading = $state(true);
 	let newPerson = $state('');
-	let editingSkillIdx = $state(null);
+	let editingSkillId = $state(null);
 	let tempSkill = $state(50);
 	let waitingList = $state([]);
 	let teamAssignments = $state({
@@ -270,13 +270,13 @@
 							<p class="py-4 text-center text-base-content/60">인원이 없습니다</p>
 						{:else}
 							<div class="space-y-1">
-								{#each people as person, idx}
+								{#each [...people].sort((a, b) => b.skill - a.skill) as person, idx}
 									{@const tier = getLolTier(person.skill)}
 									<div class="flex items-center justify-between gap-2 rounded bg-base-200 p-2">
 										<div class="flex items-center gap-2">
 											<Icon icon={tier.icon} class={`text-xl ${tier.color}`} />
 											<span class="text-sm">{person.name}</span>
-											{#if editingSkillIdx === idx}
+											{#if editingSkillId === person.id}
 												<input
 													type="number"
 													min="0"
@@ -291,7 +291,7 @@
 														if (isNaN(skillValue) || skillValue < 0) skillValue = 0;
 														if (skillValue > 100) skillValue = 100;
 														await updateSkill(person, skillValue);
-														editingSkillIdx = null;
+														editingSkillId = null;
 													}}
 												>
 													저장
@@ -301,7 +301,7 @@
 												<button
 													class="btn btn-outline btn-xs btn-info"
 													onclick={() => {
-														editingSkillIdx = idx;
+														editingSkillId = person.id;
 														tempSkill = person.skill;
 													}}
 												>
@@ -310,19 +310,21 @@
 											{/if}
 										</div>
 										<div class="flex gap-1">
-											<button
-												class="btn btn-outline btn-xs btn-warning"
-												onclick={() => addToWaitingList(person)}
-												disabled={waitingList.some(p => p.id === person.id)}
-											>
-												추가
-											</button>
-											<button
-												class="btn btn-outline btn-xs btn-error"
-												onclick={() => removePerson(person)}
-											>
-												✕
-											</button>
+											{#if editingSkillId !== person.id}
+												<button
+													class="btn btn-outline btn-xs btn-warning"
+													onclick={() => addToWaitingList(person)}
+													disabled={waitingList.some(p => p.id === person.id)}
+												>
+													추가
+												</button>
+												<button
+													class="btn btn-outline btn-xs btn-error"
+													onclick={() => removePerson(person)}
+												>
+													✕
+												</button>
+											{/if}
 										</div>
 									</div>
 								{/each}
@@ -374,7 +376,7 @@
 					<h2 class="card-title text-lg text-warning">⏳ 대기 리스트 ({waitingList.length}명)</h2>
 
 					<!-- 대기 인원 목록 -->
-					<div class="mb-4 max-h-40 flex-1 overflow-y-auto">
+					<div class="mb-4 max-h-[200px] flex-1 overflow-y-auto">
 						{#if waitingList.length === 0}
 							<p class="py-4 text-center text-base-content/60">대기 인원이 없습니다</p>
 						{:else}
