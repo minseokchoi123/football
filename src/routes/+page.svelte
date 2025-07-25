@@ -213,51 +213,10 @@
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-base-200">
-	<div class="mx-auto flex w-full max-w-6xl flex-col items-center justify-center">
-		<!-- Header -->
-		<div class="mb-6 w-full text-center">
-			<h1 class="mb-2 text-4xl font-bold text-base-content">⚽ 족구 팀 배정</h1>
-			<div class="stats flex stats-horizontal justify-center bg-base-100 shadow">
-				<div class="stat place-items-center">
-					<div class="stat-title">총 인원</div>
-					<div class="stat-value text-lg">{people.length}</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">A팀</div>
-					<div class="stat-value text-lg text-primary">{teamACount}/4</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">B팀</div>
-					<div class="stat-value text-lg text-secondary">{teamBCount}/4</div>
-				</div>
-				<div class="stat place-items-center">
-					<div class="stat-title">미배정</div>
-					<div class="stat-value text-lg text-warning">{unassignedCount}</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- 티어 분포 카드 -->
-		<div class="card bg-base-100 shadow mb-6 w-full">
-			<div class="card-body p-4">
-				<h2 class="card-title text-lg mb-4">🏆 티어 분포</h2>
-				<div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
-					{#each Object.entries(tierDistribution) as [tierName, tierInfo]}
-						{@const tier = getLolTier(tierName === '아이언' ? 5 : tierName === '브론즈' ? 15 : tierName === '실버' ? 25 : tierName === '골드' ? 35 : tierName === '플래티넘' ? 45 : tierName === '에메랄드' ? 55 : tierName === '다이아' ? 65 : tierName === '마스터' ? 75 : tierName === '그랜드마스터' ? 85 : 95)}
-						<div class="tooltip" data-tip="{tierName}: {tierInfo.range}점">
-							<div class="text-center p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors">
-								<Icon icon={tier.icon} class={`text-2xl ${tier.color} mx-auto mb-1`} />
-								<div class="text-xs font-semibold">{tierName}</div>
-								<div class="text-lg font-bold text-primary">{tierInfo.count}명</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
-		</div>
-
-		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-6 lg:grid-cols-4">
-			<!-- 인원 관리 -->
+	<div class="mx-auto flex w-full max-w-7xl flex-col items-center justify-center">
+ <div class="grid grid-cols-7">
+   <div class="col-span-2">
+  			<!-- 인원 관리 -->
 			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow" id="main-card">
 				<div class="card-body flex h-full flex-col p-4">
 					<h2 class="card-title text-lg">👥 인원 관리</h2>
@@ -357,6 +316,52 @@
 					</div>
 				</div>
 			</div>
+   </div>
+   <div class="col-span-5">
+   		<!-- Header -->
+		<div class="mb-6 w-full text-center">
+			<h1 class="mb-2 text-4xl font-bold text-base-content">⚽ 족구 팀 배정</h1>
+			<div class="stats flex stats-horizontal justify-center bg-base-100 shadow">
+				<div class="stat place-items-center">
+					<div class="stat-title">총 인원</div>
+					<div class="stat-value text-lg">{people.length}</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">A팀</div>
+					<div class="stat-value text-lg text-primary">{teamACount}/4</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">B팀</div>
+					<div class="stat-value text-lg text-secondary">{teamBCount}/4</div>
+				</div>
+				<div class="stat place-items-center">
+					<div class="stat-title">미배정</div>
+					<div class="stat-value text-lg text-warning">{unassignedCount}</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 티어 분포 카드 -->
+		<div class="card bg-base-100 shadow mb-6 w-full">
+			<div class="card-body p-4">
+				<h2 class="card-title text-lg mb-4">🏆 티어 분포</h2>
+				<div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+					{#each Object.entries(tierDistribution) as [tierName, tierInfo]}
+						{@const tier = getLolTier(tierName === '아이언' ? 5 : tierName === '브론즈' ? 15 : tierName === '실버' ? 25 : tierName === '골드' ? 35 : tierName === '플래티넘' ? 45 : tierName === '에메랄드' ? 55 : tierName === '다이아' ? 65 : tierName === '마스터' ? 75 : tierName === '그랜드마스터' ? 85 : 95)}
+						<div class="tooltip" data-tip="{tierName}: {tierInfo.range}점">
+							<div class="text-center p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors">
+								<Icon icon={tier.icon} class={`text-2xl ${tier.color} mx-auto mb-1`} />
+								<div class="text-xs font-semibold">{tierName}</div>
+								<div class="text-lg font-bold text-primary">{tierInfo.count}명</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+
+		<div class="grid w-full grid-cols-1 items-stretch justify-center gap-6 lg:grid-cols-3">
+
 
 			<!-- 대기 리스트 -->
 			<div class="card flex h-full flex-1 flex-col bg-base-100 shadow border-l-4 border-warning">
@@ -511,5 +516,8 @@
 				</div>
 			</div>
 		</div>
+   </div>
+
+ </div>
 	</div>
 </div>
