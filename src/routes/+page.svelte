@@ -282,7 +282,7 @@
 
 	<!-- Main Content -->
 	<div class="mx-auto max-w-7xl px-6 py-8">
-		<div class="grid grid-cols-7 gap-8">
+		  <div class="grid grid-cols-1 gap-8 md:grid-cols-7">
 			<div class="col-span-2">
 				<!-- 인원 관리 -->
 				<div class="card flex h-full flex-1 flex-col bg-base-100 shadow-xl" id="main-card">
@@ -387,7 +387,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="col-span-5">
+			   <div class="col-span-1 md:col-span-5">
 				<!-- 티어 분포 카드 -->
 				<div class="card mb-8 w-full bg-base-100 shadow-xl">
 					<div class="card-body p-6">
@@ -435,7 +435,7 @@
 					</div>
 				</div>
 
-				<div class="grid w-full grid-cols-1 items-stretch justify-center gap-8 lg:grid-cols-3">
+				    <div class="grid w-full grid-cols-1 items-stretch justify-center gap-8 lg:grid-cols-3">
 					<!-- 대기 리스트 -->
 					<div
 						class="card flex h-full flex-1 flex-col border-l-4 border-warning bg-base-100 shadow-xl"
