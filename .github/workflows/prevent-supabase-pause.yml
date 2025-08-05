@@ -22,7 +22,7 @@ jobs:
           
           echo "Response: $response"
           
-          if echo "$response" | grep -q '"success":true'; then
+          if echo "$response" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
             echo "✅ RPC 함수 호출 성공"
           else
             echo "❌ RPC 함수 호출 실패"
