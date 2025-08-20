@@ -8,20 +8,20 @@ on:
 jobs:
   update-keepalive:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Call Supabase RPC function
         run: |
           response=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/update_keepalive" \
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             -H "Content-Type: application/json")
-          
+
           echo "Response: $response"
-          
+
           if echo "$response" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
             echo "✅ RPC 함수 호출 성공"
           else

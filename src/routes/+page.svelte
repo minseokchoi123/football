@@ -1,6 +1,5 @@
 <script>
 	import Icon from '@iconify/svelte';
-	import { supabase } from '$lib/supabase.js';
 	import { onMount } from 'svelte';
 
 	function getLolTier(skill) {
@@ -15,17 +14,19 @@
 		if (skill <= 89) return { name: '그랜드마스터', icon: 'mdi:crown', color: 'text-red-500' };
 		return { name: '챌린저', icon: 'mdi:star-check-outline', color: 'text-yellow-500' };
 	}
+
 	let people = $state([]);
 	let loading = $state(false);
 	let newPerson = $state('');
 	let editingSkillId = $state(null);
 	let tempSkill = $state('');
 	let waitingList = $state([]);
-	let simulationCount = $state(10); // 시뮬레이션 횟수 상태 추가
+	let simulationCount = $state(10);
 	let teamAssignments = $state({
 		A: [null, null, null, null],
 		B: [null, null, null, null]
 	});
+
 	// 모달 상태
 	let modalOpen = $state(false);
 	let selectedTeam = $state('');
@@ -63,7 +64,6 @@
 			챌린저: { count: 0, range: '90-100', color: 'text-yellow-500' }
 		};
 
-		// 실제 분포 계산
 		people.forEach((person) => {
 			const tier = getLolTier(person.skill);
 			if (distribution[tier.name]) {
@@ -74,72 +74,69 @@
 		return distribution;
 	});
 
-	async function loadPeople() {
-		const { data, error } = await supabase
-			.from('people')
-			.select('*')
-			.order('created_at', { ascending: true });
+	// 로컬스토리지 함수들
+	function savePeopleToLocalStorage() {
+		localStorage.setItem('team-matching-people', JSON.stringify(people));
+	}
 
-		if (error) {
-			console.error('Error loading people:', error);
-		} else {
-			people = data || [];
+	function loadPeopleFromLocalStorage() {
+		const stored = localStorage.getItem('team-matching-people');
+		if (stored) {
+			try {
+				people = JSON.parse(stored);
+			} catch (e) {
+				console.error('로컬스토리지 데이터 파싱 오류:', e);
+				people = [];
+			}
 		}
 		loading = false;
 	}
 
-	async function updateSkill(person, newSkill) {
-		const { error } = await supabase.from('people').update({ skill: newSkill }).eq('id', person.id);
-
-		if (error) {
-			console.error('Error updating skill:', error);
-		} else {
+	function updateSkill(person, newSkill) {
+		const personIndex = people.findIndex((p) => p.id === person.id);
+		if (personIndex !== -1) {
+			people[personIndex].skill = newSkill;
 			person.skill = newSkill;
+			savePeopleToLocalStorage();
 		}
 	}
 
 	onMount(() => {
-		loadPeople();
+		loadPeopleFromLocalStorage();
 	});
 
-	async function addPerson() {
+	function addPerson() {
 		if (canAddPerson) {
 			const newPersonData = {
+				id: Date.now(), // 간단한 ID 생성
 				name: newPerson.trim(),
-				skill: 0
+				skill: 0,
+				created_at: new Date().toISOString()
 			};
-
-			const { data, error } = await supabase.from('people').insert([newPersonData]).select();
-
-			if (error) {
-				console.error('Error adding person:', error);
-			} else {
-				people.push(data[0]);
-				newPerson = '';
-			}
+			people.push(newPersonData);
+			savePeopleToLocalStorage();
+			newPerson = '';
 		}
 	}
 
-	async function removePerson(personToRemove) {
-		const { error } = await supabase.from('people').delete().eq('id', personToRemove.id);
+	function removePerson(personToRemove) {
+		// 팀 배정에서 제거
+		teamAssignments.A = teamAssignments.A.map((p) => (p?.name === personToRemove.name ? null : p));
+		teamAssignments.B = teamAssignments.B.map((p) => (p?.name === personToRemove.name ? null : p));
 
-		if (error) {
-			console.error('Error removing person:', error);
-		} else {
-			teamAssignments.A = teamAssignments.A.map((p) =>
-				p?.name === personToRemove.name ? null : p
-			);
-			teamAssignments.B = teamAssignments.B.map((p) =>
-				p?.name === personToRemove.name ? null : p
-			);
-			people = people.filter((p) => p.id !== personToRemove.id);
-		}
+		// 대기 리스트에서 제거
+		waitingList = waitingList.filter((p) => p.id !== personToRemove.id);
+
+		// 인원 목록에서 제거
+		people = people.filter((p) => p.id !== personToRemove.id);
+		savePeopleToLocalStorage();
 	}
 
 	function availableOptions(team, idx) {
 		return people.filter(
 			(p) =>
-				!allAssigned.some((ap) => ap.name === p.name) || teamAssignments[team][idx]?.name === p.name
+				!allAssigned.some((ap) => ap?.name === p.name) ||
+				teamAssignments[team][idx]?.name === p.name
 		);
 	}
 
@@ -168,6 +165,7 @@
 	function removeFromWaitingList(person) {
 		waitingList = waitingList.filter((p) => p.id !== person.id);
 	}
+
 	function shuffleWaitingList() {
 		if (waitingList.length === 0) return;
 
@@ -175,53 +173,39 @@
 		teamAssignments.A = [null, null, null, null];
 		teamAssignments.B = [null, null, null, null];
 
-		// 전체 대기리스트 사용 (8명 제한 제거)
 		const toAssign = [...waitingList];
 		if (toAssign.length < 2) return;
 
 		let bestAssignment = null;
 		let smallestDifference = Infinity;
 
-		// 시뮬레이션 변수 사용
 		for (let i = 0; i < simulationCount; i++) {
-			// 전체 리스트 셔플
 			const shuffled = [...toAssign].sort(() => Math.random() - 0.5);
-
-			// 팀 나누기 - 전체를 절반씩 나누되, 최대 각 팀당 4명까지
 			const totalPlayers = Math.min(shuffled.length, 8);
 			const teamSize = Math.floor(totalPlayers / 2);
-
 			const teamA = shuffled.slice(0, teamSize);
 			const teamB = shuffled.slice(teamSize, teamSize * 2);
 
-			// 각 팀을 점수 순으로 정렬 (높은 점수부터)
 			teamA.sort((a, b) => b.skill - a.skill);
 			teamB.sort((a, b) => b.skill - a.skill);
 
-			// 팀 점수 합계 계산
 			const teamAScore = teamA.reduce((sum, person) => sum + person.skill, 0);
 			const teamBScore = teamB.reduce((sum, person) => sum + person.skill, 0);
-
-			// 점수 차이 계산
 			const difference = Math.abs(teamAScore - teamBScore);
 
-			// 가장 차이가 적은 조합 저장
 			if (difference < smallestDifference) {
 				smallestDifference = difference;
 				bestAssignment = { teamA: [...teamA], teamB: [...teamB] };
 			}
 		}
 
-		// 최적의 조합을 팀에 배정
 		if (bestAssignment) {
-			// A팀 배정 (점수순으로 이미 정렬됨)
 			bestAssignment.teamA.forEach((person, index) => {
 				if (index < 4) {
 					teamAssignments.A[index] = person;
 				}
 			});
 
-			// B팀 배정 (점수순으로 이미 정렬됨)
 			bestAssignment.teamB.forEach((person, index) => {
 				if (index < 4) {
 					teamAssignments.B[index] = person;
@@ -235,29 +219,17 @@
 			addPerson();
 		}
 	}
-
-	// 셔플 함수: 각 라인별로만 섞기 (A팀 1번과 B팀 1번끼리, 2번끼리 ...)
-	function shuffleTeams() {
-		// 각 라인별로 현재 배정된 인원 추출
-		for (let i = 0; i < 4; i++) {
-			const pair = [teamAssignments.A[i], teamAssignments.B[i]].filter((p) => p !== null);
-			// 셔플 (Fisher-Yates)
-			for (let j = pair.length - 1; j > 0; j--) {
-				const k = Math.floor(Math.random() * (j + 1));
-				[pair[j], pair[k]] = [pair[k], pair[j]];
-			}
-			// 다시 배정
-			teamAssignments.A[i] = pair[0] || null;
-			teamAssignments.B[i] = pair[1] || null;
-		}
-	}
 </script>
 
 <div class="min-h-screen bg-base-200">
 	<!-- Header -->
 	<div class="">
 		<div class="mx-auto max-w-7xl px-4 py-6">
-			<h1 class="mb-6 text-center text-4xl font-bold text-base-content flex justify-center items-center"><img src="./logo.svg" alt="logo" class="size-40">타족단 팀 매칭</h1>
+			<h1
+				class="mb-6 flex items-center justify-center text-center text-4xl font-bold text-base-content"
+			>
+				<img src="./logo.svg" alt="logo" class="size-40" />타족단 팀 매칭
+			</h1>
 			<!-- 통계 정보 -->
 			<div class="stats flex stats-horizontal justify-center bg-base-200 shadow-lg">
 				<div class="stat place-items-center">
@@ -282,13 +254,12 @@
 
 	<!-- Main Content -->
 	<div class="mx-auto max-w-7xl px-6 py-8">
-		  <div class="grid grid-cols-1 gap-8 md:grid-cols-7">
+		<div class="grid grid-cols-1 gap-8 md:grid-cols-7">
 			<div class="col-span-2">
 				<!-- 인원 관리 -->
 				<div class="card flex h-full flex-1 flex-col bg-base-100 shadow-xl" id="main-card">
 					<div class="card-body flex h-full flex-col p-6">
 						<h2 class="card-title text-lg">👥 인원 관리</h2>
-
 						<!-- 추가 -->
 						<div class="mb-4 flex gap-2">
 							<input
@@ -302,7 +273,6 @@
 								추가
 							</button>
 						</div>
-
 						<!-- 목록 -->
 						<div class="mb-2 max-h-96 flex-1 overflow-y-auto">
 							{#if loading}
@@ -315,7 +285,7 @@
 										{@const tier = getLolTier(person.skill)}
 										<div class="flex items-center justify-between gap-2 rounded bg-base-200 p-2">
 											<div class="flex items-center gap-2">
-												<Icon icon={tier.icon} class={`text-xl ${tier.color}`} />
+												<Icon icon={tier.icon} class="text-xl {tier.color}" />
 												<span class="text-sm">{person.name}</span>
 												{#if editingSkillId === person.id}
 													<input
@@ -331,7 +301,7 @@
 															let skillValue = Number(tempSkill);
 															if (isNaN(skillValue) || skillValue < 0) skillValue = 0;
 															if (skillValue > 100) skillValue = 100;
-															await updateSkill(person, skillValue);
+															updateSkill(person, skillValue);
 															editingSkillId = null;
 														}}
 													>
@@ -361,9 +331,13 @@
 													</button>
 													<button
 														class="btn btn-outline btn-xs btn-error"
-														onclick={() => removePerson(person)}
+														onclick={() => {
+															if (confirm(`${person.name}을(를) 삭제하시겠습니까?`)) {
+																removePerson(person);
+															}
+														}}
 													>
-														✕
+														삭제
 													</button>
 												{/if}
 											</div>
@@ -372,22 +346,15 @@
 								</div>
 							{/if}
 						</div>
-
 						<!-- 액션 버튼 -->
-						<div class="mt-auto grid grid-cols-2 gap-2">
-							<button class="btn btn-outline btn-sm" onclick={clearAll}> 초기화 </button>
-							<button
-								class="btn btn-sm btn-warning"
-								onclick={shuffleTeams}
-								disabled={!(teamACount === 4 && teamBCount === 4)}
-							>
-								팀원섞기
-							</button>
+						<div class="mt-auto">
+							<button class="btn w-full btn-outline btn-sm" onclick={clearAll}> 초기화 </button>
 						</div>
 					</div>
 				</div>
 			</div>
-			   <div class="col-span-1 md:col-span-5">
+
+			<div class="col-span-1 md:col-span-5">
 				<!-- 티어 분포 카드 -->
 				<div class="card mb-8 w-full bg-base-100 shadow-xl">
 					<div class="card-body p-6">
@@ -419,7 +386,7 @@
 									<div
 										class="cursor-pointer rounded-lg bg-base-200 p-3 text-center transition-colors hover:bg-base-300"
 									>
-										<Icon icon={tier.icon} class={`text-2xl ${tier.color} mx-auto mb-1`} />
+										<Icon icon={tier.icon} class="text-2xl {tier.color} mx-auto mb-1" />
 										<div class="text-xs font-semibold">
 											{#if tierName === '그랜드마스터'}
 												그랜드<br />마스터
@@ -435,7 +402,7 @@
 					</div>
 				</div>
 
-				    <div class="grid w-full grid-cols-1 items-stretch justify-center gap-8 lg:grid-cols-3">
+				<div class="grid w-full grid-cols-1 items-stretch justify-center gap-8 lg:grid-cols-3">
 					<!-- 대기 리스트 -->
 					<div
 						class="card flex h-full flex-1 flex-col border-l-4 border-warning bg-base-100 shadow-xl"
@@ -444,7 +411,6 @@
 							<h2 class="card-title text-lg text-warning">
 								⏳ 대기 리스트 ({waitingList.length}명)
 							</h2>
-
 							<!-- 대기 인원 목록 -->
 							<div class="mb-4 max-h-[200px] flex-1 overflow-y-auto">
 								{#if waitingList.length === 0}
@@ -455,7 +421,7 @@
 											{@const tier = getLolTier(person.skill)}
 											<div class="flex items-center justify-between gap-2 rounded bg-base-200 p-2">
 												<div class="flex items-center gap-2">
-													<Icon icon={tier.icon} class={`text-xl ${tier.color}`} />
+													<Icon icon={tier.icon} class="text-xl {tier.color}" />
 													<span class="text-sm">{person.name}</span>
 													<span class="text-xs font-bold text-warning">{person.skill}</span>
 												</div>
@@ -470,7 +436,6 @@
 									</div>
 								{/if}
 							</div>
-
 							<!-- 시뮬레이션 횟수 인풋 + 셔플 버튼 -->
 							<div class="mt-auto flex items-center gap-2">
 								<label class="flex items-center gap-1">
@@ -478,7 +443,7 @@
 										type="number"
 										min="1"
 										max="100"
-										class="input input-xs w-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+										class="input input-xs w-14 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 										bind:value={simulationCount}
 										style="text-align: right;"
 									/>
@@ -486,9 +451,9 @@
 								<button
 									class="btn flex-1 btn-warning"
 									onclick={shuffleWaitingList}
-									disabled={waitingList.length === 0}
+									disabled={waitingList.length < 8}
 								>
-									셔플하기
+									셔플(8명↑)
 								</button>
 							</div>
 						</div>
@@ -501,7 +466,6 @@
 								<h3 class="mb-4 text-lg font-bold">
 									{selectedTeam}팀 {selectedPosition + 1}번 선택
 								</h3>
-
 								<div class="max-h-80 space-y-2 overflow-y-auto">
 									{#each availableOptions(selectedTeam, selectedPosition) as option}
 										{@const tier = getLolTier(option.skill)}
@@ -509,12 +473,11 @@
 											class="btn w-full justify-start btn-outline"
 											onclick={() => selectPerson(option)}
 										>
-											<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
+											<Icon icon={tier.icon} class="text-lg {tier.color}" />
 											<span>{option.name}</span>
 											<span class="text-xs font-bold">{option.skill}</span>
 										</button>
 									{/each}
-
 									<!-- 빈 슬롯 옵션 -->
 									<button
 										class="btn w-full justify-start btn-outline"
@@ -523,7 +486,6 @@
 										<span class="text-base-content/60">빈 슬롯</span>
 									</button>
 								</div>
-
 								<div class="modal-action">
 									<button class="btn" onclick={() => (modalOpen = false)}>취소</button>
 								</div>
@@ -541,7 +503,6 @@
 								🔵 A팀 ({teamACount}/4)
 								<span class="ml-2 text-xs text-primary">총점: {teamASum}점</span>
 							</h2>
-
 							<div class="flex-1 space-y-3">
 								{#each Array(4) as _, idx}
 									<div>
@@ -554,7 +515,7 @@
 										>
 											{#if teamAssignments.A[idx]}
 												{@const tier = getLolTier(teamAssignments.A[idx].skill)}
-												<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
+												<Icon icon={tier.icon} class="text-lg {tier.color}" />
 												<span>{teamAssignments.A[idx].name}</span>
 												<span class="text-xs font-bold text-primary"
 													>{teamAssignments.A[idx].skill}</span
@@ -579,7 +540,6 @@
 								🟣 B팀 ({teamBCount}/4)
 								<span class="ml-2 text-xs text-secondary">총점: {teamBSum}점</span>
 							</h2>
-
 							<div class="flex-1 space-y-3">
 								{#each Array(4) as _, idx}
 									<div>
@@ -592,7 +552,7 @@
 										>
 											{#if teamAssignments.B[idx]}
 												{@const tier = getLolTier(teamAssignments.B[idx].skill)}
-												<Icon icon={tier.icon} class={`text-lg ${tier.color}`} />
+												<Icon icon={tier.icon} class="text-lg {tier.color}" />
 												<span>{teamAssignments.B[idx].name}</span>
 												<span class="text-xs font-bold text-secondary"
 													>{teamAssignments.B[idx].skill}</span
